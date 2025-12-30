@@ -1,6 +1,6 @@
 class Intcode
 
-    attr_accessor :program, :pointer, :halted, :inputs, :inputLoc, :outputs, :waiting, :relativeBase
+    attr_accessor :program, :pointer, :halted, :inputs, :inputLoc, :outputs, :waiting, :relativeBase, :debug
 
     def initialize(program)
         @program = program.split(",").map { |i| i.to_i }
@@ -11,6 +11,7 @@ class Intcode
         @inputLoc = 0
         @outputs = []
         @relativeBase = 0
+        @debug = false
     end
 
     def clone
@@ -82,6 +83,10 @@ class Intcode
     def executeOpcode1(parameterMode)
         ptrs = getPointers(parameterMode, 3)
 
+        if @debug
+          puts "Adding #{readPtr(ptrs[0])} [#{ptrs[0]}] and #{readPtr(ptrs[1])} [#{ptrs[1]}], storing in [#{ptrs[2]}]"
+        end
+
         @program[ptrs[2]] = readPtr(ptrs[0]) + readPtr(ptrs[1])
 
         @pointer += 4
@@ -89,6 +94,10 @@ class Intcode
 
     def executeOpcode2(parameterMode)
         ptrs = getPointers(parameterMode, 3)
+
+        if @debug
+          puts "Multiplying #{readPtr(ptrs[0])} [#{ptrs[0]}] and #{readPtr(ptrs[1])} [#{ptrs[1]}], storing in [#{ptrs[2]}]"
+        end
 
         @program[ptrs[2]] = readPtr(ptrs[0]) * readPtr(ptrs[1])
 
@@ -102,6 +111,9 @@ class Intcode
             @waiting = true
             return
         end
+        if @debug
+          puts "Reading input #{@inputs[@inputLoc]}, storing in [#{ptrs[0]}]"
+        end
         @program[ptrs[0]] = @inputs[@inputLoc]
         @inputLoc += 1
 
@@ -110,6 +122,9 @@ class Intcode
 
     def executeOpcode4(parameterMode)
         ptrs = getPointers(parameterMode, 1)
+        if @debug
+          puts "Outputting #{readPtr(ptrs[0])} [#{ptrs[0]}]"
+        end
         outputs.append(readPtr(ptrs[0]))
 
         @pointer += 2
@@ -117,6 +132,10 @@ class Intcode
 
     def executeOpcode5(parameterMode)
         ptrs = getPointers(parameterMode, 2)
+
+        if @debug
+          puts "Jumping to [#{ptrs[1]}] if #{readPtr(ptrs[0])} [#{ptrs[0]}] is not 0"
+        end
 
         if readPtr(ptrs[0]) != 0
             @pointer = readPtr(ptrs[1])
@@ -128,6 +147,10 @@ class Intcode
     def executeOpcode6(parameterMode)
         ptrs = getPointers(parameterMode, 2)
 
+        if @debug
+          puts "Jumping to [#{ptrs[1]}] if #{readPtr(ptrs[0])} [#{ptrs[0]}] is 0"
+        end
+
         if readPtr(ptrs[0]) == 0
             @pointer = readPtr(ptrs[1])
         else
@@ -137,6 +160,10 @@ class Intcode
 
     def executeOpcode7(parameterMode)
         ptrs = getPointers(parameterMode, 3)
+
+        if @debug
+          puts "Setting [#{ptrs[2]}] to #{readPtr(ptrs[0])} [#{ptrs[0]}] < #{readPtr(ptrs[1])} [#{ptrs[1]}]"
+        end
 
         if readPtr(ptrs[0]) < readPtr(ptrs[1])
             @program[ptrs[2]] = 1
@@ -149,6 +176,10 @@ class Intcode
     def executeOpcode8(parameterMode)
         ptrs = getPointers(parameterMode, 3)
 
+        if @debug
+          puts "Setting [#{ptrs[2]}] to #{readPtr(ptrs[0])} [#{ptrs[0]}] == #{readPtr(ptrs[1])} [#{ptrs[1]}]"
+        end
+
         if readPtr(ptrs[0]) == readPtr(ptrs[1])
             @program[ptrs[2]] = 1
         else
@@ -159,7 +190,12 @@ class Intcode
 
     def executeOpcode9(parameterMode)
         ptrs = getPointers(parameterMode, 1)
+
         @relativeBase += readPtr(ptrs[0])
+
+        if @debug
+          puts "Increasing relative base by #{readPtr(ptrs[0])} [#{ptrs[0]}] to #{@relativeBase}"
+        end
 
         @pointer += 2
     end
@@ -167,73 +203,4 @@ class Intcode
     def readPtr(ptr)
         @program[ptr] || 0
     end
-end
-
-def part1(input)
-    intcode = Intcode.new(input[0])
-
-    whitePanels = Set[]
-    paintedOnce = Set[]
-
-    location = [0, 0]
-    facing = "u"
-
-    while not intcode.halted
-
-        if whitePanels.include? location
-            intcode.inputs.append(1)
-        else
-            intcode.inputs.append(0)
-        end
-
-        intcode.run
-
-        out = intcode.outputs.last(2)
-
-        # paint
-        if out[0] == 1
-            whitePanels.add(location.clone)
-        else
-            whitePanels.delete(location.clone)
-        end
-        paintedOnce.add(location.clone)
-
-        # turn
-        if out[1] == 0
-            # turn left
-            if facing == "u"
-                facing = "l"
-            elsif facing == "l"
-                facing = "d"
-            elsif facing == "d"
-                facing = "r"
-            else
-                facing = "u"
-            end
-        else
-            # turn right
-            if facing == "u"
-                facing = "r"
-            elsif facing == "r"
-                facing = "d"
-            elsif facing == "d"
-                facing = "l"
-            else
-                facing = "u"
-            end
-        end
-
-        # move
-        if facing == "u"
-            location[0] -= 1
-        elsif facing == "l"
-            location[1] -= 1
-        elsif facing == "d"
-            location[0] += 1
-        else
-            location[1] += 1
-        end
-
-    end
-    return paintedOnce.size
 end

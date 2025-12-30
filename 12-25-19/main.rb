@@ -11,7 +11,7 @@ def part1(input)
 end
 
 def part2(input)
-    return input
+    return "free star!"
 end
 
 puts part1(data)
